@@ -17,8 +17,8 @@ export default function LoginPage() {
   setLoading(true);
     try {
       await login(email, password);
-      // redirect to profile after successful login
-      router.push("/profile");
+      // redirect to products after successful login
+      router.push("/products");
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
@@ -32,7 +32,8 @@ export default function LoginPage() {
   setLoading(true);
     try {
       await createAccount(email, password);
-      router.push("/profile");
+      // after sign up, go to products
+      router.push("/products");
     } catch (err) {
       setError(err.message || "Sign up failed");
     } finally {

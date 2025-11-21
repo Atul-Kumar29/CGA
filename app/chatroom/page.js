@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase";
@@ -21,6 +21,9 @@ export default function ChatroomPage() {
 	const [messages, setMessages] = useState([]);
 	const [text, setText] = useState("");
 	const [sending, setSending] = useState(false);
+	const [product, setProduct] = useState(null);
+	const searchParams = useSearchParams();
+	const productId = searchParams?.get ? searchParams.get("productId") : null;
 
 	useEffect(() => {
 		const unsubAuth = onAuthStateChanged(auth, (u) => {
@@ -48,18 +51,39 @@ export default function ChatroomPage() {
 		return () => unsub();
 	}, []);
 
+	// load product context if productId is present
+	useEffect(() => {
+		if (!productId) return;
+		const load = async () => {
+			try {
+				const { doc, getDoc } = await import('firebase/firestore');
+				const dref = doc(db, 'products', productId);
+				const snap = await getDoc(dref);
+				if (snap.exists()) setProduct({ id: snap.id, ...snap.data() });
+			} catch (err) {
+				console.error('Failed to load product context', err);
+			}
+		};
+		load();
+	}, [productId]);
+
 	async function sendMessage(e) {
 		e.preventDefault();
 		if (!text.trim()) return;
 		if (!user) return router.push("/login");
 		setSending(true);
 		try {
-			await addDoc(collection(db, "messages"), {
+			const payload = {
 				text: text.trim(),
 				uid: user.uid,
 				email: user.email || null,
 				createdAt: serverTimestamp(),
-			});
+			};
+			if (productId) {
+				payload.productId = productId;
+				payload.productName = product?.name || null;
+			}
+			await addDoc(collection(db, "messages"), payload);
 			setText("");
 		} catch (err) {
 			console.error("sendMessage error", err);
